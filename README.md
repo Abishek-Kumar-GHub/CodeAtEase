@@ -252,3 +252,14 @@ If everything works:
 - ✅ AI analysis works with DeepSeek
 
 **You're ready to code! 🎉**
+
+---
+
+## Screenshots
+<img width="1920" height="1080" alt="Screenshot_2025-11-08_23_18_19" src="https://github.com/user-attachments/assets/beae4c1c-efcf-4981-9fca-d2d11dc32a07" />
+- **Lander Page**
+<img width="1920" height="1080" alt="Screenshot_2025-11-08_23_18_25" src="https://github.com/user-attachments/assets/3759974c-5a8c-46a4-b495-7204c9e59b6f" />\
+- **Repository selection**
+<img width="1920" height="1080" alt="Screenshot_2025-11-08_23_47_45" src="https://github.com/user-attachments/assets/755bf2f8-5bee-417e-8bbc-dfd103ac3180" />
+- **CodeAtEaseDemo**
+
