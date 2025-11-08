@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeAtEase - Editor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            overflow: hidden;
+            background: #000000;
+            color: #FFFFFF;
+        }
+
+        .resizer {
+            width: 4px;
+            cursor: col-resize;
+            background: #333333;
+            transition: background 0.2s;
+        }
+
+        .resizer:hover {
+            background: #FFFFFF;
+        }
+
+        .file-item {
+            transition: background 0.2s;
+        }
+
+        .file-item:hover {
+            background: #1a1a1a;
+        }
+
+        .file-item.active {
+            background: #2a2a2a;
+        }
+
+        #codeEditor {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            tab-size: 4;
+            resize: none;
+            outline: none;
+            background: #000000;
+            color: #FFFFFF;
+        }
+
+        .toast {
+            background-color: #1a1a1a !important;
+            border: 2px solid #FFFFFF !important;
+            color: #FFFFFF !important;
+        }
+
+        #aiResponse {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .folder-icon, .file-icon {
+            flex-shrink: 0;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #444444;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #666666;
+        }
+
+        .dropdown {
+            display: none;
+            position: absolute;
+            background: #1a1a1a;
+            border: 2px solid #FFFFFF;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(255,255,255,0.1);
+            z-index: 100;
+        }
+
+        .dropdown.show {
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-black text-white">
+    <!-- Navbar -->
+    <nav class="bg-black border-b-2 border-white px-6 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+            </svg>
+            <h1 class="text-xl font-bold text-white">CodeAtEase</h1>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <!-- Repository Name -->
+            <div class="px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg">
+                <span id="repoName" class="font-medium text-white">Loading...</span>
+            </div>
+
+            <!-- Push to GitHub Button -->
+            <button id="pushBtn" class="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg hover:bg-gray-200 font-medium">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                </svg>
+                Push to GitHub
+            </button>
+
+            <!-- Account -->
+            <div class="flex items-center gap-2 px-3 py-2 bg-black border-2 border-white text-white rounded-lg">
+                <div class="w-8 h-8 bg-white text-black rounded-full flex items-center justify-center font-bold" id="userAvatar">
+                    JD
+                </div>
+                <span class="font-medium" id="userName">John Doe</span>
+            </div>
+
+            <!-- Back Button -->
+            <button id="backBtn" class="flex items-center gap-2 px-4 py-2 bg-black border-2 border-white text-white rounded-lg hover:bg-gray-900 font-medium">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                Back
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="flex" style="height: calc(100vh - 61px);">
+        <!-- Left Panel - File Explorer -->
+        <div id="leftPanel" class="bg-black border-r-2 border-gray-800 overflow-auto" style="width: 20%;">
+            <div class="p-4">
+                <h3 class="font-bold text-white mb-3">Files</h3>
+                <div id="fileTree"></div>
+            </div>
+        </div>
+
+        <!-- Left Resizer -->
+        <div id="leftResizer" class="resizer"></div>
+
+        <!-- Middle Panel - Code Editor -->
+        <div id="middlePanel" class="flex flex-col bg-black overflow-hidden" style="width: 60%;">
+            <div id="fileHeader" class="bg-gray-900 px-4 py-2 border-b-2 border-gray-800 hidden">
+                <span id="currentFileName" class="font-medium text-white"></span>
+            </div>
+            <div id="emptyState" class="flex-1 flex items-center justify-center text-gray-500">
+                <div class="text-center">
+                    <svg class="w-16 h-16 mx-auto mb-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <p>Select a file to start editing</p>
+                </div>
+            </div>
+            <textarea id="codeEditor" class="hidden flex-1 p-4" spellcheck="false"></textarea>
+        </div>
+
+        <!-- Right Resizer -->
+        <div id="rightResizer" class="resizer"></div>
+
+        <!-- Right Panel - AI Assistant -->
+        <div id="rightPanel" class="border-l-2 border-gray-800 bg-black flex flex-col" style="width: 20%;">
+            <div class="bg-white px-4 py-3 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+                    </svg>
+                    <h3 class="font-bold text-black">CatAI</h3>
+                </div>
+                <button id="closeAiBtn" class="text-black hover:bg-gray-200 p-1 rounded">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-auto p-4">
+                <div id="aiEmptyState" class="text-center text-gray-500 mt-8">
+                    <svg class="w-12 h-12 mx-auto mb-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+                    </svg>
+                    <p>Ask me anything about your code</p>
+                </div>
+                <div id="aiResponseContainer" class="hidden bg-gray-900 rounded-lg p-4 border-2 border-gray-700">
+                    <pre id="aiResponse" class="text-sm text-white"></pre>
+                </div>
+            </div>
+
+            <div class="p-4 border-t-2 border-gray-800">
+                <textarea id="aiPrompt" placeholder="Ask about selected code or entire repository..." class="w-full px-3 py-2 border-2 border-gray-700 bg-gray-900 text-white rounded-lg resize-none focus:outline-none focus:border-white placeholder-gray-500" rows="3"></textarea>
+                <button id="analyzeBtn" class="w-full mt-2 px-4 py-2 bg-white text-black rounded-lg hover:bg-gray-200 font-medium flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+                    </svg>
+                    <span>Analyze</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating AI Button -->
+    <button id="floatingAiBtn" class="hidden fixed bottom-4 right-4 p-3 bg-white text-black rounded-full shadow-lg hover:bg-gray-200">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+        </svg>
+    </button>
+
+    <script>
+        // Configure Toastr
+        toastr.options = {
+            closeButton: true,
+            progressBar: true,
+            positionClass: 'toast-top-right',
+            timeOut: 3000,
+            toastClass: 'toast'
+        };
+
+        // API Configuration
+        const API_URL = window.location.origin;
+
+        // State
+        let fileStructure = [];
+        let currentFile = null;
+        let selectedCode = '';
+        let selectedRepo = null;
+        let leftWidth = 20;
+        let rightWidth = 20;
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', async () => {
+            // Check authentication
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                toastr.error('Please login first', '⚠ Error');
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 1500);
+                return;
+            }
+
+            // Load user info
+            await loadUser(token);
+
+            // Load selected repository
+            const repoData = localStorage.getItem('selectedRepo');
+            if (!repoData) {
+                toastr.error('No repository selected', '⚠ Error');
+                setTimeout(() => {
+                    window.location.href = '/repo.html';
+                }, 1500);
+                return;
+            }
+
+            selectedRepo = JSON.parse(repoData);
+            document.getElementById('repoName').textContent = selectedRepo.full_name;
+
+            // Load repository files
+            await loadRepositoryFiles();
+        });
+
+        // Load user information
+        async function loadUser(token) {
+            try {
+                const response = await fetch(`${API_URL}/auth/user`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load user');
+                }
+
+                const user = await response.json();
+                document.getElementById('userName').textContent = user.name || user.username;
+                document.getElementById('userAvatar').textContent = user.avatar;
+            } catch (error) {
+                console.error('Error loading user:', error);
+                toastr.error('Failed to load user information', '⚠ Error');
+            }
+        }
+
+        // Load repository files
+        async function loadRepositoryFiles() {
+            const token = localStorage.getItem('access_token');
+            
+            try {
+                toastr.info('Loading repository files...', 'ℹ Loading');
+
+                const response = await fetch(
+                    `${API_URL}/api/repository/tree/${selectedRepo.owner}/${selectedRepo.name}`,
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/json'
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error('Failed to load repository files');
+                }
+
+                const data = await response.json();
+                fileStructure = data.tree;
+
+                renderFileTree();
+                toastr.success('Repository loaded successfully', '✓ Success');
+
+            } catch (error) {
+                console.error('Error loading repository:', error);
+                toastr.error(error.message || 'Failed to load repository files', '⚠ Error');
+            }
+        }
+
+        // Render file tree
+        function renderFileTree() {
+            const fileTree = document.getElementById('fileTree');
+            fileTree.innerHTML = '';
+            
+            function renderItem(item, level = 0) {
+                const div = document.createElement('div');
+                
+                if (item.type === 'folder') {
+                    div.innerHTML = `
+                        <div class="file-item flex items-center gap-2 px-2 py-1.5 cursor-pointer rounded" data-path="${item.path}" data-type="folder" style="padding-left: ${level * 16 + 8}px">
+                            <svg class="folder-icon w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                ${item.expanded ? 
+                                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>' :
+                                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>'
+                                }
+                            </svg>
+                            <span class="text-sm text-white">${item.name}</span>
+                        </div>
+                    `;
+                    
+                    fileTree.appendChild(div);
+                    
+                    if (item.expanded && item.children) {
+                        item.children.forEach(child => renderItem(child, level + 1));
+                    }
+                } else {
+                    div.innerHTML = `
+                        <div class="file-item flex items-center gap-2 px-2 py-1.5 cursor-pointer rounded" data-path="${item.path}" data-type="file" style="padding-left: ${level * 16 + 8}px">
+                            <svg class="file-icon w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            <span class="text-sm text-white">${item.name}</span>
+                        </div>
+                    `;
+                    fileTree.appendChild(div);
+                }
+                
+                return div;
+            }
+            
+            fileStructure.forEach(item => renderItem(item));
+        }
+
+        // Handle file/folder click
+        document.addEventListener('click', (e) => {
+            const fileItem = e.target.closest('.file-item');
+            if (fileItem) {
+                const path = fileItem.dataset.path;
+                const type = fileItem.dataset.type;
+                
+                if (type === 'folder') {
+                    toggleFolder(path);
+                } else {
+                    selectFile(path);
+                }
+            }
+        });
+
+        // Toggle folder
+        function toggleFolder(path) {
+            function findAndToggle(items) {
+                for (let item of items) {
+                    if (item.path === path && item.type === 'folder') {
+                        item.expanded = !item.expanded;
+                        renderFileTree();
+                        return true;
+                    }
+                    if (item.children && findAndToggle(item.children)) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            
+            findAndToggle(fileStructure);
+        }
+
+        // Select and load file
+        async function selectFile(path) {
+            const token = localStorage.getItem('access_token');
+            
+            try {
+                toastr.info('Loading file...', 'ℹ Loading');
+
+                const response = await fetch(
+                    `${API_URL}/api/repository/file/${selectedRepo.owner}/${selectedRepo.name}?path=${encodeURIComponent(path)}`,
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/json'
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error('Failed to load file');
+                }
+
+                const fileData = await response.json();
+                currentFile = fileData;
+
+                // Update UI
+                document.getElementById('emptyState').classList.add('hidden');
+                document.getElementById('fileHeader').classList.remove('hidden');
+                document.getElementById('codeEditor').classList.remove('hidden');
+                document.getElementById('currentFileName').textContent = fileData.name;
+                document.getElementById('codeEditor').value = fileData.content;
+                
+                // Update active state
+                document.querySelectorAll('.file-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                document.querySelector(`.file-item[data-path="${path}"]`).classList.add('active');
+
+                toastr.success('File loaded successfully', '✓ Success');
+
+            } catch (error) {
+                console.error('Error loading file:', error);
+                toastr.error(error.message || 'Failed to load file', '⚠ Error');
+            }
+        }
+
+        // Handle code selection
+        document.getElementById('codeEditor').addEventListener('mouseup', () => {
+            const textarea = document.getElementById('codeEditor');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            selectedCode = textarea.value.substring(start, end);
+        });
+
+        // AI Analysis
+        document.getElementById('analyzeBtn').addEventListener('click', async () => {
+            const prompt = document.getElementById('aiPrompt').value.trim();
+            
+            if (!prompt) {
+                toastr.error('Please enter a prompt', '⚠ Error');
+                return;
+            }
+
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const originalContent = analyzeBtn.innerHTML;
+            analyzeBtn.innerHTML = `
+                <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                <span>Analyzing...</span>
+            `;
+            analyzeBtn.disabled = true;
+
+            const token = localStorage.getItem('access_token');
+
+            try {
+                const response = await fetch(`${API_URL}/api/analyze`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        selectedCode: selectedCode,
+                        currentFile: currentFile,
+                        repository: fileStructure
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('AI analysis failed');
+                }
+
+                const data = await response.json();
+                
+                // Display response
+                document.getElementById('aiEmptyState').classList.add('hidden');
+                document.getElementById('aiResponseContainer').classList.remove('hidden');
+                document.getElementById('aiResponse').textContent = data.response;
+
+                toastr.success('Analysis complete', '✓ Success');
+            } catch (error) {
+                console.error('Error:', error);
+                toastr.error(error.message || 'Failed to analyze code', '⚠ Error');
+            } finally {
+                analyzeBtn.innerHTML = originalContent;
+                analyzeBtn.disabled = false;
+            }
+        });
+
+        // Back button
+        document.getElementById('backBtn').addEventListener('click', () => {
+            window.location.href = '/repo.html';
+        });
+
+        // Push to GitHub
+        document.getElementById('pushBtn').addEventListener('click', () => {
+            toastr.info('Push to GitHub feature - Coming soon!', 'ℹ Info');
+        });
+
+        // AI Panel Controls
+        document.getElementById('closeAiBtn').addEventListener('click', () => {
+            rightWidth = 0;
+            updatePanelWidths();
+        });
+
+        document.getElementById('floatingAiBtn').addEventListener('click', () => {
+            rightWidth = 20;
+            updatePanelWidths();
+        });
+
+        // Panel Resizing
+        let isResizingLeft = false;
+        let isResizingRight = false;
+
+        document.getElementById('leftResizer').addEventListener('mousedown', () => {
+            isResizingLeft = true;
+        });
+
+        document.getElementById('rightResizer').addEventListener('mousedown', () => {
+            isResizingRight = true;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isResizingLeft) {
+                const newWidth = (e.clientX / window.innerWidth) * 100;
+                if (newWidth >= 5 && newWidth <= 40) {
+                    leftWidth = newWidth;
+                    updatePanelWidths();
+                }
+            }
+            
+            if (isResizingRight) {
+                const newWidth = ((window.innerWidth - e.clientX) / window.innerWidth) * 100;
+                if (newWidth >= 5 && newWidth <= 50) {
+                    rightWidth = newWidth;
+                    updatePanelWidths();
+                }
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isResizingLeft = false;
+            isResizingRight = false;
+        });
+
+        function updatePanelWidths() {
+            const middleWidth = 100 - leftWidth - rightWidth;
+            document.getElementById('leftPanel').style.width = leftWidth + '%';
+            document.getElementById('middlePanel').style.width = middleWidth + '%';
+            document.getElementById('rightPanel').style.width = rightWidth + '%';
+            
+            if (leftWidth === 0) {
+                document.getElementById('leftPanel').style.display = 'none';
+                document.getElementById('leftResizer').style.display = 'none';
+            } else {
+                document.getElementById('leftPanel').style.display = 'block';
+                document.getElementById('leftResizer').style.display = 'block';
+            }
+            
+            if (rightWidth === 0) {
+                document.getElementById('rightPanel').style.display = 'none';
+                document.getElementById('rightResizer').style.display = 'none';
+                document.getElementById('floatingAiBtn').classList.remove('hidden');
+            } else {
+                document.getElementById('rightPanel').style.display = 'flex';
+                document.getElementById('rightResizer').style.display = 'block';
+                document.getElementById('floatingAiBtn').classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>

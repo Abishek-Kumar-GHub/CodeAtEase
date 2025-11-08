@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign in to GitHub | CodeAtEase</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Toastr CSS -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css"
+  />
+
+  <style>
+    /* Black & White Theme */
+    body {
+      background-color: #000000;
+      color: #FFFFFF;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    /* Animated gradient overlay */
+    @keyframes gradientFlow {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    body::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(270deg, #1a1a1a, #2a2a2a, #0a0a0a);
+      background-size: 200% 200%;
+      animation: gradientFlow 15s ease infinite;
+      opacity: 0.3;
+      z-index: 0;
+    }
+
+    /* Smooth fade-in for popup */
+    #loginPopup {
+      transform: scale(1);
+      opacity: 1;
+      transition: all 0.4s ease-in-out;
+    }
+
+    /* Toastr Black & White */
+    .toast {
+      background-color: #1a1a1a !important;
+      border: 2px solid #FFFFFF !important;
+      color: #FFFFFF !important;
+    }
+
+    .toast-success {
+      background-color: #1a1a1a !important;
+      border: 2px solid #FFFFFF !important;
+    }
+
+    .toast-error {
+      background-color: #2a2a2a !important;
+      border: 2px solid #FFFFFF !important;
+    }
+
+    .toast-info {
+      background-color: #1a1a1a !important;
+      border: 2px solid #999999 !important;
+    }
+
+    /* Loading animation */
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-spinner {
+      animation: spin 1s linear infinite;
+    }
+  </style>
+</head>
+<body class="relative min-h-screen flex items-center justify-center overflow-hidden">
+
+  <!-- Background pattern -->
+  <div class="absolute inset-0 opacity-10">
+    <svg width="100%" height="100%">
+      <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+        <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" stroke-width="0.5"/>
+      </pattern>
+      <rect width="100%" height="100%" fill="url(#grid)" />
+    </svg>
+  </div>
+
+  <!-- Overlay -->
+  <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent"></div>
+
+  <!-- Sign-in Popup -->
+  <div
+    id="loginPopup"
+    class="relative z-20 bg-black border-2 border-white rounded-2xl shadow-[0_0_30px_rgba(255,255,255,0.3)] p-10 w-[420px] text-center"
+  >
+    <!-- Logo/Icon -->
+    <div class="mb-6">
+      <svg class="w-16 h-16 mx-auto text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
+      </svg>
+    </div>
+
+    <h1 class="text-4xl font-bold text-white mb-2">CodeAtEase</h1>
+    <p class="text-gray-400 mb-8">AI-Powered Code Editor</p>
+
+    <h2 class="text-2xl font-semibold text-white mb-6">Sign in to GitHub</h2>
+
+    <!-- GitHub OAuth Button -->
+    <button
+      id="githubSignIn"
+      class="flex items-center justify-center gap-3 bg-white hover:bg-gray-200 text-black px-6 py-4 rounded-lg font-semibold shadow-lg w-full transition-all transform hover:scale-105"
+    >
+      <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+        <path fill-rule="evenodd" d="M12 .297a12 12 0 00-3.794 23.412c.6.112.82-.258.82-.577v-2.234c-3.338.724-4.042-1.416-4.042-1.416-.547-1.387-1.334-1.756-1.334-1.756-1.09-.746.083-.73.083-.73 1.205.084 1.84 1.243 1.84 1.243 1.07 1.835 2.808 1.305 3.494.998.108-.776.418-1.306.76-1.606-2.665-.304-5.467-1.332-5.467-5.932 0-1.31.469-2.382 1.237-3.222-.124-.303-.537-1.524.117-3.176 0 0 1.008-.322 3.301 1.23a11.49 11.49 0 016.002 0c2.292-1.552 3.3-1.23 3.3-1.23.655 1.652.242 2.873.118 3.176.77.84 1.236 1.912 1.236 3.222 0 4.61-2.807 5.625-5.479 5.922.43.372.823 1.102.823 2.222v3.293c0 .319.218.693.825.575A12.004 12.004 0 0012 .297z" clip-rule="evenodd"/>
+      </svg>
+      <span id="buttonText">Sign in with GitHub</span>
+      <svg id="loadingSpinner" class="hidden w-5 h-5 loading-spinner" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+      </svg>
+    </button>
+
+    <p class="text-gray-400 text-sm mt-8">
+      New to GitHub? 
+      <a href="https://github.com/signup" target="_blank" class="text-white hover:underline font-semibold">Create an account</a>
+    </p>
+
+    <!-- Info -->
+    <div class="mt-8 pt-6 border-t border-gray-800">
+      <p class="text-xs text-gray-500">
+        By signing in, you agree to authenticate via GitHub OAuth.<br/>
+        Your GitHub account is required to access repositories.
+      </p>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="absolute bottom-4 w-full text-center text-gray-500 text-sm z-10">
+    © 2025 CodeAtEase | Crafted with 🤍 by Muralimithun CS
+  </footer>
+
+  <!-- Toastr + jQuery -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+  <script>
+    const API_URL = 'http://localhost:8000';
+    const githubSignIn = document.getElementById("githubSignIn");
+    const buttonText = document.getElementById("buttonText");
+    const loadingSpinner = document.getElementById("loadingSpinner");
+
+    // Toastr config (Black & White)
+    toastr.options = {
+      closeButton: true,
+      progressBar: true,
+      positionClass: "toast-top-right",
+      timeOut: 3000,
+      toastClass: "toast",
+      iconClasses: {
+        error: 'toast-error',
+        info: 'toast-info',
+        success: 'toast-success'
+      }
+    };
+
+    // Check if user is already logged in
+    window.addEventListener('DOMContentLoaded', () => {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        // Verify token is still valid
+        verifyToken(token);
+      }
+    });
+
+    async function verifyToken(token) {
+      try {
+        const response = await fetch(`${API_URL}/auth/user`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          toastr.info('Already logged in, redirecting...', 'ℹ Info');
+          setTimeout(() => {
+            window.location.href = 'step2-repositories.html';
+          }, 1000);
+        } else {
+          localStorage.removeItem('access_token');
+        }
+      } catch (error) {
+        console.error('Token verification failed:', error);
+        localStorage.removeItem('access_token');
+      }
+    }
+
+    // GitHub OAuth login
+    githubSignIn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      
+      // Show loading state
+      buttonText.textContent = 'Connecting...';
+      loadingSpinner.classList.remove('hidden');
+      githubSignIn.disabled = true;
+
+      toastr.info('Redirecting to GitHub OAuth...', 'ℹ Please Wait');
+      
+      // Redirect to FastAPI GitHub OAuth endpoint
+      setTimeout(() => {
+        window.location.href = `${API_URL}/auth/github`;
+      }, 800);
+    });
+
+    // Handle OAuth callback is no longer needed here since FastAPI redirects directly to Step 2
+    // The token will be in the URL of Step 2 page
+
+    // Handle Enter key
+    document.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        githubSignIn.click();
+      }
+    });
+  </script>
+</body>
+</html>
